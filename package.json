@@ -22,6 +22,6 @@
   },
   "homepage": "https://github.com/Bonzar/rtk-query-tags-util#readme",
   "publishConfig": {
-    "@bonzar:registry": "https://npm.pkg.github.com"
+    "@Bonzar:registry": "https://npm.pkg.github.com"
   }
 }
