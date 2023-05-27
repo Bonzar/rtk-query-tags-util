@@ -1,0 +1,27 @@
+{
+  "name": "@bonzar/rtk-query-tags-util",
+  "version": "1.0.0",
+  "description": "A companion package for Redux Toolkit Query, this package offers helpful utilities for providing and invalidating tags.",
+  "main": "index.js",
+  "scripts": {
+    "test": "exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bonzar/rtk-query-tags-util.git"
+  },
+  "keywords": [
+    "RTKQuery",
+    "Redux",
+    "Tags"
+  ],
+  "author": "Vladislav Navoian",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Bonzar/rtk-query-tags-util/issues"
+  },
+  "homepage": "https://github.com/Bonzar/rtk-query-tags-util#readme",
+  "publishConfig": {
+    "@bonzar:registry": "https://npm.pkg.github.com"
+  }
+}
