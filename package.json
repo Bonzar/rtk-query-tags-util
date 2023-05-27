@@ -1,5 +1,5 @@
 {
-  "name": "@bonzar/rtk-query-tags-util",
+  "name": "@Bonzar/rtk-query-tags-util",
   "version": "1.0.4",
   "description": "A companion package for Redux Toolkit Query, this package offers helpful utilities for providing and invalidating tags.",
   "main": "index.js",
