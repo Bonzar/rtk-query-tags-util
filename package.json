@@ -1,5 +1,6 @@
 {
   "name": "@bonzar/rtk-query-tags-util",
+  "version": "1.0.3",
   "description": "A companion package for Redux Toolkit Query, this package offers helpful utilities for providing and invalidating tags.",
   "main": "index.js",
   "scripts": {
@@ -21,6 +22,6 @@
   },
   "homepage": "https://github.com/Bonzar/rtk-query-tags-util#readme",
   "publishConfig": {
-    "@Bonzar:registry": "https://npm.pkg.github.com"
+    "@bonzar:registry": "https://npm.pkg.github.com"
   }
 }
