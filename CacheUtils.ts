@@ -15,7 +15,7 @@ export type TagsCallbackError = FetchBaseQueryError | undefined;
  * fields in rtkQuery createApi object
  */
 export type TagsCallback<R, A, TagTypes extends string> = (
-  result: R,
+  result: R | undefined,
   error: TagsCallbackError,
   arg: A
 ) => TagItem<TagTypes>[];
@@ -44,18 +44,18 @@ export class CacheUtils<TagTypes extends string> {
    */
   public withTags<R, A>(
     tagsProviders: AtLeastOneFunctionsFlow<
-      [tags?: ProvidingTags<R | undefined, A, TagTypes>],
-      TagsCallback<R | undefined, A, TagTypes>
+      [tags?: ProvidingTags<R, A, TagTypes>],
+      TagsCallback<R, A, TagTypes>
     >
   ) {
     return composeWith((fn, res) => fn(res))(tagsProviders);
   }
 
   public static getTags<R, A, TagTypes extends string>(
-    result: R,
+    result: R | undefined,
     error: TagsCallbackError,
     arg: A
-  ): (tags?: ProvidingTags<R, A, TagTypes> | undefined) => TagItem<TagTypes>[] {
+  ): (tags: ProvidingTags<R, A, TagTypes> | undefined) => TagItem<TagTypes>[] {
     return (tags) => {
       if (!tags) return [];
 
@@ -68,7 +68,7 @@ export class CacheUtils<TagTypes extends string> {
   }
 
   private static concatTags<R, A, TagTypes extends string>(
-    result: R,
+    result: R | undefined,
     error: TagsCallbackError,
     arg: A
   ): (
@@ -100,16 +100,12 @@ export class CacheUtils<TagTypes extends string> {
    * ```
    */
   public static createTagsProvider<R, A, TagTypes extends string>(
-    providingTags: ProvidingTags<R | undefined, A, TagTypes>
-  ): (
-    tags?: ProvidingTags<R | undefined, A, TagTypes>
-  ) => TagsCallback<R | undefined, A, TagTypes> {
+    providingTags: ProvidingTags<R, A, TagTypes>
+  ): (tags?: ProvidingTags<R, A, TagTypes>) => TagsCallback<R, A, TagTypes> {
     return (tags) => (result, error, arg) => {
-      return this.concatTags<R | undefined, A, TagTypes>(
-        result,
-        error,
-        arg
-      )(providingTags)(tags);
+      return this.concatTags<R, A, TagTypes>(result, error, arg)(providingTags)(
+        tags
+      );
     };
   }
 
@@ -317,7 +313,7 @@ export class CacheUtils<TagTypes extends string> {
   public invalidateOnSuccess<R, A>(
     successTags?: ProvidingTags<R, A, TagTypes>
   ) {
-    return (result: R, error: TagsCallbackError, arg: A) => {
+    return (result: R | undefined, error: TagsCallbackError, arg: A) => {
       if (error) return [];
 
       return CacheUtils.getTags<R, A, TagTypes>(

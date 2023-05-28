@@ -87,10 +87,12 @@ export function withResultAsId<R extends string | number, A>(type: TagTypes) {
 This can be useful to conditionally include providing tags. The `invalidateOnSuccess()` utility is already implemented for this purpose:
 
 ```typescript
+import type { ProvidingTags, TagsCallbackError } from "@bonzar/rtk-query-tags-util";
+
 export function invalidateOnError<R, A>(
   errorTags?: ProvidingTags<R, A, TagTypes>
 ) {
-  return (result: R, error: TagsError, arg: A) => {
+  return (result: R | undefined, error: TagsCallbackError, arg: A) => {
     if (!error) return [];
 
     return CacheUtils.getTags<R, A, TagTypes>(result, error, arg)(errorTags);
@@ -111,7 +113,7 @@ import { withArgAsId } from "./apiCacheUtils";
 const apiSlice = createApi({
   // ... other api creation options
   endpoints: (build) => ({
-    getProducts: build.mutation<GetProductsResult, GetProductsArg>({
+    getProducts: build.query<GetProductsResult, GetProductsArg>({
       query: (arg) => `product/${arg}`,
       providesTags: withArgAsId("Product")(), // it will provide tag { type: "Product", id: arg }
     }),
@@ -159,7 +161,7 @@ This is pretty unreadable :)
 You can use the `withTags` utility to compose them and provide types to each one:
 
 ```typescript
-import { withTags } from "./rtkQueryCacheUtils.test";
+import { withTags } from "./apiCacheUtils";
 
 const apiSlice = createApi({
   // omit other api creation options
@@ -390,7 +392,7 @@ invalidateOnSuccess(() => ["Product"]); // rejected request
 withTags<R, A>(tagsProviders: TagsProvider[]): TagsProvider
 ```
 
-This function is used to compose multiple tags provider functions together and pass typings from the generic to each of them. 
+This function is used to compose multiple tags provider functions together and pass typings from the generic to each of them.
 
 It provides a better way to type multiple tags providers.
 
