@@ -47,7 +47,9 @@ export class CacheUtils<TagTypes extends string> {
       [tags?: ProvidingTags<R, A, TagTypes>],
       TagsCallback<R, A, TagTypes>
     >
-  ): (tags?: ProvidingTags<R, A, TagTypes> | undefined) => TagItem<TagTypes>[] {
+  ): (
+    tags?: ProvidingTags<R, A, TagTypes> | undefined
+  ) => TagsCallback<R, A, TagTypes> {
     return composeWith((fn, res) => fn(res))(tagsProviders);
   }
 
