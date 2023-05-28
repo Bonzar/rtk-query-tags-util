@@ -146,7 +146,7 @@ For example:
 const apiSlice = createApi({
   // omit other api creation options
   endpoints: (build) => ({
-    getProducts: build.mutation<GetProductsResult, GetProductsArg>({
+    getProducts: build.query<GetProductsResult, GetProductsArg>({
       query: (arg) => `product/${arg}`,
       providesTags: withArgAsId<GetProductsResult, GetProductsArg>("Product")(
         withNestedList<GetProductsResult, GetProductsArg>(
@@ -174,7 +174,7 @@ import { withTags } from "./apiCacheUtils";
 const apiSlice = createApi({
   // omit other api creation options
   endpoints: (build) => ({
-    getProducts: build.mutation<GetProductsResult, GetProductsArg>({
+    getProducts: build.query<GetProductsResult, GetProductsArg>({
       query: (arg) => `product/${arg}`,
       providesTags: withTags<GetProductsResult, GetProductsArg>([
         withArgAsId("Product"),
