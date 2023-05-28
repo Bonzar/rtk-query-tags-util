@@ -4,7 +4,8 @@
   "description": "A companion package for Redux Toolkit Query, this package offers helpful utilities for providing and invalidating tags.",
   "main": "CacheUtils.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "typeCheck": "tsc CacheUtils.ts"
   },
   "type": "module",
   "repository": {
@@ -27,8 +28,8 @@
     "ramda": "^0.29.0"
   },
   "devDependencies": {
-    "@vitest/coverage-c8": "^0.31.1",
     "prettier": "2.8.8",
+    "typescript": "^5.0.4",
     "vitest": "^0.31.1"
   }
 }
