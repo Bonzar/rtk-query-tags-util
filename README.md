@@ -87,7 +87,10 @@ export function withResultAsId<R extends string | number, A>(type: TagTypes) {
 This can be useful to conditionally include providing tags. The `invalidateOnSuccess()` utility is already implemented for this purpose:
 
 ```typescript
-import type { ProvidingTags, TagsCallbackError } from "@bonzar/rtk-query-tags-util";
+import type {
+  ProvidingTags,
+  TagsCallbackError,
+} from "@bonzar/rtk-query-tags-util";
 
 export function invalidateOnError<R, A>(
   errorTags?: ProvidingTags<R, A, TagTypes>
@@ -149,7 +152,12 @@ const apiSlice = createApi({
         withNestedList<GetProductsResult, GetProductsArg>(
           "Basket",
           (result) => result.basket
-        )(invalidateOnSuccess<GetProductsResult, GetProductsArg>(["Success"]))
+        )(
+          withNestedResultId<GetProductsResult, GetProductsArg>(
+            "Coupon",
+            (result) => result.coupon.id
+          )()
+        )
       ),
     }),
   }),
@@ -171,7 +179,7 @@ const apiSlice = createApi({
       providesTags: withTags<GetProductsResult, GetProductsArg>([
         withArgAsId("Product"),
         withNestedList("Basket", (result) => result.basket), // result already typed
-        invalidateOnSuccess(["Success"]),
+        withNestedResultId("Coupon", (result) => result.coupon.id),
       ])(),
     }),
   }),
