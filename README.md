@@ -71,8 +71,10 @@ This is also a good place to create additional utils. You can do this easily wit
 To provide additional tags based on the result, error, and argument:
 
 ```typescript
+const cacheUtils = new CacheUtils<TagTypes>();
+
 export function withResultAsId<R extends string | number, A>(type: TagTypes) {
-  return CacheUtils.createTagsProvider<R, A, TagTypes>((result, error, arg) => {
+  return cacheUtils.createTagsProvider<R, A, TagTypes>((result, error, arg) => {
     if (!result) {
       return [];
     }
@@ -87,20 +89,33 @@ export function withResultAsId<R extends string | number, A>(type: TagTypes) {
 This can be useful to conditionally include providing tags. The `invalidateOnSuccess()` utility is already implemented for this purpose:
 
 ```typescript
-import type {
-  ProvidingTags,
-  TagsCallbackError,
-} from "@bonzar/rtk-query-tags-util";
+import type { TagsWrapper } from "@bonzar/rtk-query-tags-util";
 
-export function invalidateOnError<R, A>(
-  errorTags?: ProvidingTags<R, A, TagTypes>
-) {
-  return (result: R | undefined, error: TagsCallbackError, arg: A) => {
+const cacheUtils = new CacheUtils<TagTypes>();
+
+export const invalidateOnError: TagsWrapper<TagsType> =
+  (errorTags) => (result, error, arg) => {
     if (!error) return [];
 
-    return CacheUtils.getTags<R, A, TagTypes>(result, error, arg)(errorTags);
+    return cacheUtils.getTags(result, error, arg)(errorTags);
   };
-}
+```
+
+### Custom BaseQueryError
+
+If you use custom `baseQuery`, you can specify a type of your `BaseQueryError` when creating an instance of `CacheUtil` class.
+
+```typescript
+const cacheUtils = new CacheUtils<TagTypes, YourBaseQueryErrorType>();
+```
+
+Also, when you create a tags wrapper with `TagsWrapper` type, you should put `YourBaseQueryErrorType` as second generic
+
+```typescript
+const invalidateOnError: TagsWrapper<TagsType, YourBaseQueryErrorType> =
+  (tags) => (result, error, arg) => {
+    // ...
+  };
 ```
 
 ## Usage

@@ -1,5 +1,4 @@
-import { composeWith } from "ramda";
-import type { AtLeastOneFunctionsFlow } from "ramda";
+import { compose } from "ramda";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 
 export type TagID = string | number;
@@ -8,15 +7,13 @@ export type TagItem<TagTypes extends string> =
   | TagTypes
   | { type: TagTypes; id: TagID };
 
-export type TagsCallbackError = FetchBaseQueryError | undefined;
-
 /**
  * Callback to get tags, that can be passed to providesTags / invalidatesTags
  * fields in rtkQuery createApi object
  */
-export type TagsCallback<R, A, TagTypes extends string> = (
+export type TagsCallback<R, A, TagTypes extends string, TagsQueryError> = (
   result: R | undefined,
-  error: TagsCallbackError,
+  error: TagsQueryError | undefined,
   arg: A
 ) => TagItem<TagTypes>[];
 
@@ -24,11 +21,25 @@ export type TagsCallback<R, A, TagTypes extends string> = (
  * Tags array or callback to get tags, that can be passed to providesTags / invalidatesTags
  * fields in rtkQuery createApi object
  */
-export type ProvidingTags<R, A, TagTypes extends string> =
-  | TagsCallback<R, A, TagTypes>
+export type ProvidingTags<R, A, TagTypes extends string, TagsQueryError> =
+  | TagsCallback<R, A, TagTypes, TagsQueryError>
   | TagItem<TagTypes>[];
 
-export class CacheUtils<TagTypes extends string> {
+export type TagsProvider<R, A, TagTypes extends string, TagsQueryError> = (
+  tags?: ProvidingTags<R, A, TagTypes, TagsQueryError>
+) => TagsCallback<R, A, TagTypes, TagsQueryError>;
+
+export type TagsWrapper<
+  TagTypes extends string,
+  TagsQueryError = FetchBaseQueryError
+> = <R, A>(
+  tags?: ProvidingTags<R, A, TagTypes, TagsQueryError>
+) => TagsCallback<R, A, TagTypes, TagsQueryError>;
+
+export class CacheUtils<
+  TagTypes extends string,
+  TagsQueryError = FetchBaseQueryError
+> {
   /**
    * This function is used to compose multiple tags provider functions together and pass typings from the generic to each of them.
    *
@@ -42,24 +53,15 @@ export class CacheUtils<TagTypes extends string> {
    * ])(),
    * ```
    */
-  public withTags<R, A>(
-    tagsProviders: AtLeastOneFunctionsFlow<
-      [tags?: ProvidingTags<R, A, TagTypes>],
-      TagsCallback<R, A, TagTypes>
-    >
-  ): (
-    tags?: ProvidingTags<R, A, TagTypes> | undefined
-  ) => TagsCallback<R, A, TagTypes> {
-    return composeWith((fn, res) => fn(res))(tagsProviders);
-  }
+  public withTags = <R, A>(
+    tagsProviders: TagsProvider<R, A, TagTypes, TagsQueryError>[]
+  ): TagsProvider<R, A, TagTypes, TagsQueryError> =>
+    compose(...(tagsProviders as [any]));
 
-  public static getTags<R, A, TagTypes extends string>(
-    result: R | undefined,
-    error: TagsCallbackError,
-    arg: A
-  ): (tags: ProvidingTags<R, A, TagTypes> | undefined) => TagItem<TagTypes>[] {
-    return (tags) => {
-      if (!tags) return [];
+  public getTags =
+    <R, A>(result: R | undefined, error: TagsQueryError | undefined, arg: A) =>
+    (tags: ProvidingTags<R, A, TagTypes, TagsQueryError> | undefined) => {
+      if (!tags) return [] as TagItem<TagTypes>[];
 
       if (typeof tags === "function") {
         return tags(result, error, arg);
@@ -67,28 +69,20 @@ export class CacheUtils<TagTypes extends string> {
 
       return tags;
     };
-  }
 
-  private static concatTags<R, A, TagTypes extends string>(
-    result: R | undefined,
-    error: TagsCallbackError,
-    arg: A
-  ): (
-    tagsLeft: ProvidingTags<R, A, TagTypes> | undefined
-  ) => (
-    tagsRight: ProvidingTags<R, A, TagTypes> | undefined
-  ) => TagItem<TagTypes>[] {
-    return (tagsLeft) => (tagsRight) => {
-      const tagsGetter = this.getTags<R, A, TagTypes>(result, error, arg);
+  public concatTags =
+    <R, A>(result: R | undefined, error: TagsQueryError | undefined, arg: A) =>
+    (tagsLeft: ProvidingTags<R, A, TagTypes, TagsQueryError> | undefined) =>
+    (tagsRight: ProvidingTags<R, A, TagTypes, TagsQueryError> | undefined) => {
+      const tagsGetter = this.getTags(result, error, arg);
 
       return [...tagsGetter(tagsLeft), ...tagsGetter(tagsRight)];
     };
-  }
 
   /**
-   * TagsProvider creator that accept addition tags and return tags provider
+   * TagsProvider creator that accepts addition tags and return tags provider
    *
-   * As result concat additional tags with tags passed to arg
+   * As a result, concat additional tags with tags passed to arg
    *
    * @example ```
    * const addProductIdTag = <R, A>(id: string | number) =>
@@ -101,15 +95,14 @@ export class CacheUtils<TagTypes extends string> {
    * // ]
    * ```
    */
-  public static createTagsProvider<R, A, TagTypes extends string>(
-    providingTags: ProvidingTags<R, A, TagTypes>
-  ): (tags?: ProvidingTags<R, A, TagTypes>) => TagsCallback<R, A, TagTypes> {
-    return (tags) => (result, error, arg) => {
-      return this.concatTags<R, A, TagTypes>(result, error, arg)(providingTags)(
-        tags
-      );
+  public createTagsProvider =
+    <R, A>(
+      providingTags: ProvidingTags<R, A, TagTypes, TagsQueryError>
+    ): TagsProvider<R, A, TagTypes, TagsQueryError> =>
+    (tags) =>
+    (result, error, arg) => {
+      return this.concatTags(result, error, arg)(providingTags)(tags);
     };
-  }
 
   /**
    * Adds tags with the specified type and ids: "LIST", id property of items from the result array.
@@ -130,15 +123,14 @@ export class CacheUtils<TagTypes extends string> {
    * // ]
    * ```
    */
-  public withList<R extends Record<"id", TagID>[], A>(type: TagTypes) {
-    return CacheUtils.createTagsProvider<R, A, TagTypes>((result) => {
+  public withList = <R extends Record<"id", TagID>[], A>(type: TagTypes) =>
+    this.createTagsProvider<R, A>((result) => {
       if (!result) {
         return [{ type, id: "LIST" }];
       }
 
       return [{ type, id: "LIST" }, ...result.map(({ id }) => ({ type, id }))];
     });
-  }
 
   /**
    * Adds tags with the specified type and ids: `"LIST"`, `id` property of items from the extracted list.
@@ -165,11 +157,11 @@ export class CacheUtils<TagTypes extends string> {
    * // ]
    * ```
    */
-  public withNestedList<R, A>(
+  public withNestedList = <R, A>(
     type: TagTypes,
     extractList: (result: R) => Record<"id", TagID>[]
-  ) {
-    return CacheUtils.createTagsProvider<R, A, TagTypes>((result) => {
+  ) =>
+    this.createTagsProvider<R, A>((result) => {
       if (!result) {
         return [{ type, id: "LIST" }];
       }
@@ -178,7 +170,6 @@ export class CacheUtils<TagTypes extends string> {
 
       return [{ type, id: "LIST" }, ...list.map(({ id }) => ({ type, id }))];
     });
-  }
 
   /**
    * Adds tags with the specified type and ids: `"LIST"`, ids as properties extracted from items in the extracted list.
@@ -209,12 +200,12 @@ export class CacheUtils<TagTypes extends string> {
    * // ]
    * ```
    */
-  public withDeepNestedList<R, A, IdItem extends Record<string, unknown>>(
+  public withDeepNestedList = <R, A, IdItem extends Record<string, unknown>>(
     type: TagTypes,
     extractList: (result: NonNullable<R>) => IdItem[],
     extractId: (item: IdItem) => TagID
-  ) {
-    return CacheUtils.createTagsProvider<R, A, TagTypes>((result) => {
+  ) =>
+    this.createTagsProvider<R, A>((result) => {
       if (!result) {
         return [{ type, id: "LIST" }];
       }
@@ -226,7 +217,6 @@ export class CacheUtils<TagTypes extends string> {
         ...list.map((item) => ({ type, id: extractId(item) })),
       ];
     });
-  }
 
   /**
    * Adds a tag with the specified type and the argument as the id.
@@ -236,13 +226,10 @@ export class CacheUtils<TagTypes extends string> {
    * // [{ type: "Product", id: 5 }]
    * ```
    */
-  public withArgAsId<R, A extends TagID>(type: TagTypes) {
-    return CacheUtils.createTagsProvider<R, A, TagTypes>(
-      (result, error, arg) => {
-        return [{ type, id: arg }];
-      }
-    );
-  }
+  public withArgAsId = <R, A extends TagID>(type: TagTypes) =>
+    this.createTagsProvider<R, A>((result, error, arg) => {
+      return [{ type, id: arg }];
+    });
 
   /**
    * Adds a tag with the specified type and the id, as an extracted field from the argument
@@ -252,15 +239,15 @@ export class CacheUtils<TagTypes extends string> {
    * // [{ type: "Product", id: 5 }]
    * ```
    */
-  public withNestedArgId<R, A>(type: TagTypes, extractId: (arg: A) => TagID) {
-    return CacheUtils.createTagsProvider<R, A, TagTypes>(
-      (result, error, arg) => {
-        const id = extractId(arg);
+  public withNestedArgId = <R, A>(
+    type: TagTypes,
+    extractId: (arg: A) => TagID
+  ) =>
+    this.createTagsProvider<R, A>((result, error, arg) => {
+      const id = extractId(arg);
 
-        return [{ type, id }];
-      }
-    );
-  }
+      return [{ type, id }];
+    });
 
   /**
    * Adds a tag with the specified type and the id, as an extracted field from the result
@@ -270,11 +257,11 @@ export class CacheUtils<TagTypes extends string> {
    * // [{ type: "Product", id: 5 }]
    * ```
    */
-  public withNestedResultId<R, A>(
+  public withNestedResultId = <R, A>(
     type: TagTypes,
     extractId: (result: R) => TagID
-  ) {
-    return CacheUtils.createTagsProvider<R, A, TagTypes>((result) => {
+  ) =>
+    this.createTagsProvider<R, A>((result) => {
       if (!result) {
         return [];
       }
@@ -283,7 +270,6 @@ export class CacheUtils<TagTypes extends string> {
 
       return [{ type, id }];
     });
-  }
 
   /**
    * Adds a tag with the specified type and id `"LIST"`.
@@ -293,11 +279,8 @@ export class CacheUtils<TagTypes extends string> {
    * // [{ type: "Product", id: "LIST" }]
    * ```
    */
-  public invalidateList<R, A>(type: TagTypes) {
-    return CacheUtils.createTagsProvider<R, A, TagTypes>([
-      { type, id: "LIST" },
-    ]);
-  }
+  public invalidateList = <R, A>(type: TagTypes) =>
+    this.createTagsProvider<R, A>([{ type, id: "LIST" }]);
 
   /**
    * Adds the tags passed to the `successTags` argument, if the request is successful.
@@ -312,17 +295,10 @@ export class CacheUtils<TagTypes extends string> {
    * // []
    * ```
    */
-  public invalidateOnSuccess<R, A>(
-    successTags?: ProvidingTags<R, A, TagTypes>
-  ) {
-    return (result: R | undefined, error: TagsCallbackError, arg: A) => {
+  public invalidateOnSuccess: TagsWrapper<TagTypes, TagsQueryError> =
+    (successTags) => (result, error, arg) => {
       if (error) return [];
 
-      return CacheUtils.getTags<R, A, TagTypes>(
-        result,
-        error,
-        arg
-      )(successTags);
+      return this.getTags(result, error, arg)(successTags);
     };
-  }
 }
