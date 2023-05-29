@@ -74,7 +74,7 @@ To provide additional tags based on the result, error, and argument:
 const cacheUtils = new CacheUtils<TagTypes>();
 
 export function withResultAsId<R extends string | number, A>(type: TagTypes) {
-  return cacheUtils.createTagsProvider<R, A, TagTypes>((result, error, arg) => {
+  return cacheUtils.createTagsProvider<R, A>((result, error, arg) => {
     if (!result) {
       return [];
     }
@@ -93,7 +93,7 @@ import type { TagsWrapper } from "@bonzar/rtk-query-tags-util";
 
 const cacheUtils = new CacheUtils<TagTypes>();
 
-export const invalidateOnError: TagsWrapper<TagsType> =
+export const invalidateOnError: TagsWrapper<TagTypes> =
   (errorTags) => (result, error, arg) => {
     if (!error) return [];
 
@@ -112,7 +112,7 @@ const cacheUtils = new CacheUtils<TagTypes, YourBaseQueryErrorType>();
 Also, when you create a tags wrapper with `TagsWrapper` type, you should put `YourBaseQueryErrorType` as second generic
 
 ```typescript
-const invalidateOnError: TagsWrapper<TagsType, YourBaseQueryErrorType> =
+const invalidateOnError: TagsWrapper<TagTypes, YourBaseQueryErrorType> =
   (tags) => (result, error, arg) => {
     // ...
   };
